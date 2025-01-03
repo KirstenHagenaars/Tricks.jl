@@ -65,6 +65,35 @@ VERSION >= v"1.3" && @testset "static_hasmethod" begin
         @assert hasmethod(goo, Tuple{Real})   # Now it _is_ covered.
         @test static_hasmethod(goo, Tuple{Real})   # Now it _is_ covered.
     end
+
+    @testset "abstract type method existence" begin
+        abstract type Animal end
+        struct Dog <: Animal end
+        struct Cat <: Animal end
+
+        # Define methods for the concrete types
+        speak(::Cat) = "Meow!"
+        speak(::Dog) = "Woof!"
+
+        # Ensure the methods are recognized for the concrete types
+        @assert hasmethod(speak, Tuple{Cat})
+        @assert hasmethod(speak, Tuple{Dog})
+
+        # Verify static_hasmethod for concrete types
+        @test static_hasmethod(speak, Tuple{Cat}) == true
+        @test static_hasmethod(speak, Tuple{Dog}) == true
+
+        # Test for the abstract type (fails due to the issue)
+        @test static_hasmethod(speak, Tuple{Animal}) == false  # Fails: static_hasmethod does not check all concrete subtypes
+
+        # Now add a method for the abstract type itself
+        speak(::Animal) = "Generic Animal Sound"
+        
+        # Test again after adding the method for the abstract type
+        @assert hasmethod(speak, Tuple{Animal})
+        @test static_hasmethod(speak, Tuple{Animal}) == true  # Works now because method is defined for Animal
+
+    end
 end
 
 @testset "compat_hasmethod" begin
